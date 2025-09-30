@@ -5,45 +5,37 @@ Este proyecto proporciona una configuración completa para desplegar OpenVPN Acc
 ## 📋 Tabla de Contenidos
 
 - [Características](#características)
-- [Requisitos del Sistema](#requisitos-del-sistema)
-- [Instalación Rápida](#instalación-rápida)
-- [Configuración](#configuración)
-- [Uso](#uso)
-- [Administración](#administración)
-- [Backup y Restauración](#backup-y-restauración)
+- [Requisitos](#requisitos)
+- [Instalación y Configuración](#instalación-y-configuración)
+- [Uso Básico](#uso-básico)
+- [Administración Web](#administración-web)
+- [Gestión de Usuarios VPN](#gestión-de-usuarios-vpn)
 - [Solución de Problemas](#solución-de-problemas)
 - [Seguridad](#seguridad)
+- [Estructura del Proyecto](#estructura-del-proyecto)
 - [Referencias](#referencias)
 
-## 🚀 Características
-
-- **Despliegue con un comando**: Script automatizado de configuración
-- **Configuración persistente**: Datos y configuraciones se mantienen entre reinicios
-- **Seguridad robusta**: Configuración con privilegios mínimos necesarios
-- **Monitoreo integrado**: Health checks y logging configurado
-- **Multiplataforma**: Scripts para Linux/macOS y Windows PowerShell
-- **Configuración flexible**: Variables de entorno para personalización fácil
-
-## 📋 Requisitos del Sistema
+## 📋 Requisitos
 
 ### Software Requerido
-- **Docker Engine** 20.10+ o **Docker Desktop**
-- **Docker Compose** 2.0+ (o docker-compose 1.29+)
-- **Puerto 943/tcp** disponible (Admin Web UI)
-- **Puerto 1194/udp** disponible (OpenVPN)
+- **Docker Desktop para Windows** (versión reciente)
+- **Puertos disponibles**:
+  - `943` - Interfaz web de administración y cliente (HTTPS)
+  - `1194/udp` - Servidor OpenVPN (puerto por defecto)
 
-### Requisitos de Hardware
-- **RAM**: Mínimo 1GB, recomendado 2GB+
-- **CPU**: 1 núcleo mínimo, 2+ recomendado
-- **Almacenamiento**: 10GB libres mínimo
-- **Red**: Acceso a internet para descargar imágenes
+### Recursos del Sistema
+- **RAM**: Mínimo 512MB disponibles
+- **CPU**: 1 núcleo disponible
+- **Almacenamiento**: 2GB libres para el contenedor y datos
 
-### Consideraciones de Red
-- **IP Pública** o **Nombre de Dominio** (para acceso remoto)
-- **Firewall** configurado para permitir puertos OpenVPN
-- **NAT/Port Forwarding** configurado si está detrás de router
+### Privilegios del Sistema
+- **Docker con privilegios**: El contenedor requiere privilegios especiales para funcionar:
+  - `NET_ADMIN` - Capacidades de administración de red
+  - `MKNOD` - Crear nodos de dispositivo
+  - Acceso a `/dev/net/tun` - Dispositivo TUN para tráfico VPN
+  - (Ya están configurados en el `docker-compose.yml`)
 
-## ⚡ Instalación Rápida
+## ⚡ Instalación y Configuración
 
 ### 1. Clonar o Descargar el Proyecto
 ```bash
@@ -54,382 +46,328 @@ cd openvpn-docker
 # O descargar y extraer el archivo ZIP
 ```
 
-### 2. Ejecutar el Script de Configuración
-
-#### En Linux/macOS:
-```bash
-chmod +x scripts/setup.sh
-./scripts/setup.sh
-```
-
-#### En Windows PowerShell:
+### 2. Iniciar el Servidor OpenVPN
 ```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-.\scripts\setup.ps1
-```
-
-### 3. Acceder a la Interfaz Web
-- **Admin UI**: https://localhost:943/admin
-- **Client UI**: https://localhost:943/
-- **Usuario**: openvpn
-- **Contraseña**: changeme123! (¡CAMBIAR INMEDIATAMENTE!)
-
-## ⚙️ Configuración
-
-### Variables de Entorno
-
-Edita el archivo `.env` para personalizar tu instalación:
-
-```bash
-# Configuración del Servidor
-SERVER_HOSTNAME=tu-servidor.com        # ¡IMPORTANTE! Cambia por tu IP/dominio público
-ADMIN_PASSWORD=tu-contraseña-segura     # ¡CAMBIAR POR SEGURIDAD!
-
-# Puertos
-ADMIN_UI_PORT=943                       # Puerto de la interfaz de administración
-OPENVPN_PORT=1194                       # Puerto del servidor OpenVPN
-
-# Red VPN
-VPN_NETWORK=192.168.255.0               # Red para clientes VPN
-VPN_PROTOCOL=udp                        # Protocolo (udp/tcp)
-
-# Recursos
-MEMORY_LIMIT=1G                         # Límite de memoria
-CPU_LIMIT=2.0                          # Límite de CPU
-```
-
-### Configuración Avanzada
-
-#### Certificados SSL Personalizados
-```bash
-# Coloca tus certificados en:
-./config/certs/server.crt
-./config/certs/server.key
-
-# Actualiza .env:
-SSL_CERT_PATH=./config/certs/server.crt
-SSL_KEY_PATH=./config/certs/server.key
-```
-
-#### DNS Personalizado
-```bash
-# En .env:
-DNS_SERVERS=1.1.1.1,1.0.0.1            # Cloudflare DNS
-# o
-DNS_SERVERS=8.8.8.8,8.8.4.4            # Google DNS
-```
-
-## 📖 Uso
-
-### Comandos Básicos
-
-```bash
-# Iniciar el servidor
+# Iniciar el contenedor en segundo plano
 docker-compose up -d
 
-# Ver logs
+# Verificar que esté ejecutándose
+docker ps
+```
+
+### 3. Verificar el Estado
+```powershell
+# Ver logs para confirmar que inició correctamente
 docker logs openvpn-access-server
 
-# Detener el servidor
+# El servidor estará listo cuando veas:
+# "Server Agent started"
+# "License Info {'concurrent_connections': 2..."
+```
+
+## 🖥️ Uso Básico
+
+### Comandos Principales
+
+```powershell
+# ▶️ Iniciar el servidor
+docker-compose up -d
+
+# ⏸️ Detener el servidor
 docker-compose down
 
-# Reiniciar el servidor
+# 🔄 Reiniciar el servidor
 docker-compose restart
 
-# Actualizar imagen
-docker-compose pull && docker-compose up -d
-```
+# 📋 Ver estado del contenedor
+docker ps | findstr openvpn-access-server
 
-### Configuración Inicial del Servidor
+# 📝 Ver logs en tiempo real
+docker logs -f openvpn-access-server
 
-1. **Accede al Admin UI**: https://tu-servidor:943/admin
-2. **Login inicial**: usuario `openvpn`, contraseña del `.env`
-3. **Configurar red**:
-   - Ve a `Configuration > Network Settings`
-   - Configura tu hostname/IP público
-   - Ajusta el rango de IPs para clientes
-4. **Configurar usuarios**:
-   - Ve a `User Management > User Permissions`
-   - Crea usuarios VPN
-   - Asigna permisos y grupos
+# 📊 Ver uso de recursos
+docker stats openvpn-access-server --no-stream
 
-### Crear Usuarios VPN
-
-#### Método 1: Interfaz Web
-1. Admin UI → `User Management` → `User Permissions`
-2. Click `More Settings` junto al usuario
-3. Marcar `Allow Access` y configurar opciones
-4. Click `Save Settings`
-
-#### Método 2: Línea de Comandos
-```bash
-# Entrar al contenedor
-docker exec -it openvpn-access-server bash
-
-# Crear usuario
-/usr/local/openvpn_as/scripts/sacli --user "usuario1" --key "type" --value "user_connect"
-/usr/local/openvpn_as/scripts/sacli --user "usuario1" --key "prop_autologin" --value "true"
-
-# Establecer contraseña
-/usr/local/openvpn_as/scripts/sacli --user "usuario1" SetLocalPassword
-```
-
-## 👨‍💼 Administración
-
-### Interfaz de Administración
-
-**URL**: https://tu-servidor:943/admin
-
-#### Secciones Principales:
-- **Status Overview**: Estado del servidor y conexiones activas
-- **Network Settings**: Configuración de red y protocolos
-- **VPN Settings**: Configuración específica de OpenVPN
-- **User Management**: Administración de usuarios y permisos
-- **Authentication**: Configuración de autenticación (LDAP, RADIUS, etc.)
-- **Logging**: Configuración de logs y auditoría
-
-### Monitoreo
-
-#### Ver Conexiones Activas
-```bash
-# Dentro del contenedor
-docker exec openvpn-access-server /usr/local/openvpn_as/scripts/sacli VPNStatus
-```
-
-#### Logs del Sistema
-```bash
-# Logs del contenedor
-docker logs openvpn-access-server
-
-# Logs específicos de OpenVPN
-docker exec openvpn-access-server tail -f /var/log/openvpnas.log
-```
-
-#### Health Check
-```bash
-# Verificar estado del contenedor
-docker ps
-docker inspect openvpn-access-server
-```
-
-## 💾 Backup y Restauración
-
-### Scripts de Backup
-
-Ejecuta los scripts de backup incluidos:
-
-```bash
-# Backup completo
-./scripts/backup.sh
-
-# Backup solo configuración
-./scripts/backup.sh --config-only
-
-# Backup con compresión
-./scripts/backup.sh --compress
-```
-
-### Backup Manual
-
-```bash
-# Crear directorio de backup
-mkdir -p backups/$(date +%Y%m%d_%H%M%S)
-
-# Backup de configuración
-docker cp openvpn-access-server:/opt/openvpn-as/etc backups/$(date +%Y%m%d_%H%M%S)/
-
-# Backup de datos
-docker cp openvpn-access-server:/opt/openvpn-as/tmp backups/$(date +%Y%m%d_%H%M%S)/
-
-# Backup de la base de datos
-docker exec openvpn-access-server /usr/local/openvpn_as/scripts/sacli ConfigQuery > backups/$(date +%Y%m%d_%H%M%S)/config_backup.txt
-```
-
-### Restauración
-
-```bash
-# Detener el servidor
-docker-compose down
-
-# Restaurar configuración
-docker cp backup_folder/etc/. openvpn-access-server:/opt/openvpn-as/etc/
-
-# Reiniciar servidor
+# 🔄 Actualizar a la última versión
+docker-compose pull
 docker-compose up -d
 ```
+
+### Verificar Conectividad
+
+```powershell
+# Verificar puerto web (943)
+Test-NetConnection -ComputerName localhost -Port 943
+
+# Verificar puerto VPN (1194) 
+Test-NetConnection -ComputerName localhost -Port 1194
+```
+
+## 🌐 Administración Web
+
+### Acceso a las Interfaces
+
+Una vez que el servidor esté ejecutándose:
+
+- **🔧 Interfaz de Administración**: https://localhost:943/admin
+- **👤 Interfaz de Cliente**: https://localhost:943/
+
+### Configuración Inicial
+
+#### 1. Primer Acceso al Admin
+1. Navegar a: https://localhost:943/admin
+3. **Contraseña**: Busca la contraseña temporal generada en los logs del contenedor. Ejecuta:
+
+```powershell
+docker logs -f openvpn-access-server
+```
+
+En la salida, localiza la línea que dice:  
+`Auto-generated pass = "<contraseña>". Setting in db...`
+
+Usa esa contraseña junto con el usuario `openvpn` para iniciar sesión en la interfaz de administración.
+4. Aceptar el acuerdo de licencia de End User License Agreement (EULA)
+
+#### 2. Configuración Básica del Servidor
+1. **Network Settings** → **IMPORTANTE**: Actualizar hostname/IP público para acceso remoto
+   - Ir a `Configuration` → `Network Settings`
+   - Cambiar `Hostname or IP Address` de `localhost` a tu IP pública o dominio
+   - Esto es crítico para que los clientes puedan conectarse remotamente
+2. **VPN Settings** → Ajustar protocolos y puertos si es necesario
+3. **User Management** → Crear usuarios VPN
+
+#### 3. Configuración de Red (Opcional)
+- **Red VPN**: Se asigna automáticamente (típicamente 192.168.255.x)
+- **DNS**: Usa servidores DNS del sistema por defecto
+- **Routing**: Configuración automática para acceso a internet
+
+## 👥 Gestión de Usuarios VPN
+
+### Crear Usuarios desde la Interfaz Web
+
+1. **Admin UI** → `User Management` → `User Permissions`
+2. Buscar el usuario en la lista (inicialmente estará `openvpn`)
+3. Click en **More Settings** junto al usuario deseado  
+4. **Allow Access**: ✅ Marcar para habilitar VPN
+5. **Auto-login**: ✅ Marcar para facilitar conexión
+6. Click **Save Settings**
+
+### Crear Usuarios Adicionales
+
+```powershell
+# Acceder al contenedor para comandos avanzados
+docker exec -it openvpn-access-server bash
+
+# Crear nuevo usuario (dentro del contenedor)
+/usr/local/openvpn_as/scripts/sacli --user "usuario1" --key "type" --value "user_connect"
+/usr/local/openvpn_as/scripts/sacli --user "usuario1" --key "prop_autologin" --value "true"
+/usr/local/openvpn_as/scripts/sacli start
+
+# Salir del contenedor
+exit
+```
+
+### Descargar Perfiles de Cliente
+
+1. **Cliente navega a**: https://localhost:943/
+2. **Login con credenciales** del usuario VPN
+3. **Descargar**: 
+   - `client.ovpn` - Para OpenVPN Connect u otros clientes
+   - Instalador específico para la plataforma
 
 ## 🔧 Solución de Problemas
 
 ### Problemas Comunes
 
-#### 1. El contenedor no inicia
-```bash
-# Verificar logs
+#### ❌ El contenedor no inicia
+```powershell
+# Verificar Docker
+docker info
+
+# Ver logs detallados
 docker logs openvpn-access-server
 
-# Problemas de permisos
-sudo chown -R 1000:1000 ./config ./data ./logs
-
 # Verificar puertos en uso
-netstat -tlnp | grep :943
-netstat -ulnp | grep :1194
+netstat -an | findstr ":943"
+netstat -an | findstr ":1194"
+
+# Reiniciar Docker Desktop si es necesario
 ```
 
-#### 2. No se puede acceder a la interfaz web
-```bash
-# Verificar firewall
-sudo ufw allow 943/tcp
-sudo ufw allow 1194/udp
+#### ❌ No puedo acceder a https://localhost:943
+```powershell
+# Verificar que el contenedor esté corriendo
+docker ps
 
-# En Windows
-netsh advfirewall firewall add rule name="OpenVPN-Admin" dir=in action=allow protocol=TCP localport=943
-netsh advfirewall firewall add rule name="OpenVPN-Server" dir=in action=allow protocol=UDP localport=1194
+# Verificar logs del contenedor
+docker logs openvpn-access-server --tail 50
+
+# Asegurarse de usar HTTPS (no HTTP)
+# Aceptar certificado auto-firmado en el navegador
 ```
 
-#### 3. Clientes no pueden conectar
-```bash
-# Verificar routing
-docker exec openvpn-access-server ip route
+#### ❌ Clientes VPN no pueden conectar
 
-# Verificar iptables
-docker exec openvpn-access-server iptables -L -n
+**Verificar configuración:**
+```powershell
+# Entrar al contenedor para diagnóstico
+docker exec -it openvpn-access-server bash
 
 # Verificar configuración de red
-docker exec openvpn-access-server /usr/local/openvpn_as/scripts/sacli ConfigQuery | grep -E "host|port|proto"
+ip route
+iptables -L -n
+
+# Verificar procesos OpenVPN
+ps aux | grep openvpn
 ```
 
-#### 4. Rendimiento lento
-```bash
-# Aumentar límites de recursos en .env
-MEMORY_LIMIT=2G
-CPU_LIMIT=4.0
+**Para acceso remoto:**
+1. **Router**: Abrir puerto 1194/UDP 
+2. **Firewall Windows**: Permitir puerto 1194/UDP
+3. **Hostname**: Actualizar en Admin UI con IP pública
 
-# Recrear contenedor
-docker-compose down
-docker-compose up -d
-```
+#### ❌ Problemas de rendimiento
+```powershell
+# Ver uso de recursos
+docker stats openvpn-access-server
 
-### Logs de Diagnóstico
+# Reiniciar si es necesario
+docker-compose restart
 
-```bash
-# Log completo del sistema
-docker exec openvpn-access-server tail -f /var/log/openvpnas.log
-
-# Logs de conexiones
-docker exec openvpn-access-server tail -f /var/log/openvpn.log
-
-# Debug de configuración
-docker exec openvpn-access-server /usr/local/openvpn_as/scripts/sacli ConfigQuery
+# Verificar logs por errores
+docker logs openvpn-access-server | findstr -i error
 ```
 
 ### Comandos de Diagnóstico
 
-```bash
-# Estado del servicio
-docker exec openvpn-access-server systemctl status openvpnas
+```powershell
+# Estado completo del sistema
+docker exec openvpn-access-server /usr/local/openvpn_as/scripts/sacli VPNStatus
 
-# Información de red
-docker exec openvpn-access-server ip addr show
+# Información de configuración
+docker exec openvpn-access-server /usr/local/openvpn_as/scripts/sacli ConfigQuery
 
-# Prueba de conectividad
+# Test de conectividad
 docker exec openvpn-access-server ping -c 4 8.8.8.8
-
-# Verificar certificados
-docker exec openvpn-access-server openssl x509 -in /opt/openvpn-as/etc/certs/server.crt -text -noout
 ```
 
 ## 🔒 Seguridad
 
-### Mejores Prácticas
+### Configuración Básica de Seguridad
 
-#### 1. Cambiar Credenciales Predeterminadas
-```bash
-# Editar .env
-ADMIN_PASSWORD=una-contraseña-muy-segura
-ADMIN_USERNAME=mi-admin-usuario
+#### 1. Cambiar Contraseña por Defecto
+- Acceder al Admin UI inmediatamente después de la instalación
+- Configurar una contraseña fuerte para el usuario `openvpn`
+
+#### 2. Firewall de Windows
+```powershell
+# Permitir puertos OpenVPN (ejecutar como Administrador)
+netsh advfirewall firewall add rule name="OpenVPN-Admin" dir=in action=allow protocol=TCP localport=943
+netsh advfirewall firewall add rule name="OpenVPN-Server" dir=in action=allow protocol=UDP localport=1194
 ```
 
-#### 2. Usar Certificados SSL Válidos
-```bash
-# Obtener certificado Let's Encrypt
-certbot certonly --standalone -d tu-servidor.com
+#### 3. Para Uso en Producción
+- **Certificados SSL**: Reemplazar certificado auto-firmado
+- **Hostname público**: Configurar dominio o IP pública válida
+- **Backup regular**: De la configuración y usuarios
+- **Monitoring**: Supervisar conexiones y logs regularmente
 
-# Copiar certificados
-cp /etc/letsencrypt/live/tu-servidor.com/fullchain.pem ./config/certs/server.crt
-cp /etc/letsencrypt/live/tu-servidor.com/privkey.pem ./config/certs/server.key
-```
+### Configuraciones de Seguridad Avanzada
 
-#### 3. Configurar Firewall
-```bash
-# Ubuntu/Debian
-sudo ufw enable
-sudo ufw allow ssh
-sudo ufw allow 943/tcp
-sudo ufw allow 1194/udp
+```powershell
+# Acceder al contenedor para configuraciones avanzadas
+docker exec -it openvpn-access-server bash
 
-# CentOS/RHEL
-sudo firewall-cmd --permanent --add-port=943/tcp
-sudo firewall-cmd --permanent --add-port=1194/udp
-sudo firewall-cmd --reload
-```
-
-#### 4. Autenticación de Dos Factores
-1. Admin UI → `Authentication` → `General`
-2. Habilitar `Google Authenticator MFA`
-3. Configurar usuarios para usar 2FA
-
-#### 5. Limitar Acceso por IP
-```bash
-# En Admin UI → Authentication → General
-# Configurar "Access Control" con rangos de IP permitidos
-```
-
-### Configuración de Seguridad Avanzada
-
-```bash
-# Deshabilitar protocolos inseguros
-docker exec openvpn-access-server /usr/local/openvpn_as/scripts/sacli --key "vpn.server.tls_version_min" --value "1.2" ConfigPut
-
+# Dentro del contenedor:
 # Configurar cifrado fuerte
-docker exec openvpn-access-server /usr/local/openvpn_as/scripts/sacli --key "vpn.server.cipher" --value "AES-256-GCM" ConfigPut
+/usr/local/openvpn_as/scripts/sacli --key "vpn.server.cipher" --value "AES-256-GCM" ConfigPut
 
-# Deshabilitar compresión (seguridad)
-docker exec openvpn-access-server /usr/local/openvpn_as/scripts/sacli --key "vpn.server.comp_lzo" --value "no" ConfigPut
+# TLS mínimo
+/usr/local/openvpn_as/scripts/sacli --key "vpn.server.tls_version_min" --value "1.2" ConfigPut
+
+# Aplicar cambios
+/usr/local/openvpn_as/scripts/sacli start
+```
+
+## 📁 Estructura del Proyecto
+
+```
+VPN_Practice/
+├── docker-compose.yml    # ✅ Configuración principal (ultra-simple)
+├── README.md             # ✅ Esta documentación
+├── LICENSE               # ✅ Licencia del proyecto
+├── config/               # ✅ Configuraciones persistentes (auto-creado)
+├── data/                 # ✅ Datos del servidor (auto-creado)
+└── logs/                 # ✅ Logs del sistema (auto-creado)
+```
+
+### Descripción de Archivos
+
+- **`docker-compose.yml`**: Única configuración necesaria, sin variables complejas
+- **Directorios de datos**: Creados automáticamente por Docker con permisos correctos
+- **Volumen `openvpn-data`**: Almacena toda la configuración persistente del servidor
+
+## 💾 Backup y Mantenimiento
+
+### Crear Backup Manual
+
+```powershell
+# Crear directorio de backup
+mkdir backups
+$backup_date = Get-Date -Format "yyyyMMdd_HHmmss"
+mkdir "backups\$backup_date"
+
+# Backup del volumen completo
+docker run --rm -v vpn_practice_openvpn-data:/data -v "${PWD}\backups\$backup_date:/backup" alpine tar czf /backup/openvpn-data.tar.gz -C /data .
+
+# Backup de configuración específica
+docker exec openvpn-access-server tar czf - /opt/openvpn-as/etc > "backups\$backup_date\config.tar.gz"
+```
+
+### Restaurar Backup
+
+```powershell
+# Detener servidor
+docker-compose down
+
+# Restaurar volumen
+docker run --rm -v vpn_practice_openvpn-data:/data -v "${PWD}\backups\FECHA:/backup" alpine tar xzf /backup/openvpn-data.tar.gz -C /data
+
+# Reiniciar servidor
+docker-compose up -d
+```
+
+## 🔄 Actualización
+
+```powershell
+# Obtener la última imagen
+docker-compose pull
+
+# Recrear contenedor con nueva imagen
+docker-compose up -d
+
+# Verificar versión actualizada
+docker logs openvpn-access-server | Select-String "version"
 ```
 
 ## 📚 Referencias
 
 ### Documentación Oficial
-- [OpenVPN Access Server Docker Guide](https://openvpn.net/as-docs/docker.html)
-- [OpenVPN Docker Hub](https://hub.docker.com/r/openvpn/openvpn-as)
-- [OpenVPN Access Server Documentation](https://openvpn.net/as-docs/)
-
-### Recursos Adicionales
-- [Docker Official Documentation](https://docs.docker.com/)
-- [Docker Compose Reference](https://docs.docker.com/compose/compose-file/)
-- [OpenVPN Community](https://community.openvpn.net/)
+- **[OpenVPN Access Server Docker](https://hub.docker.com/r/openvpn/openvpn-as)** - Imagen oficial
+- **[OpenVPN AS Documentation](https://openvpn.net/as-docs/)** - Documentación completa
+- **[Docker Compose Reference](https://docs.docker.com/compose/)** - Referencia de Docker Compose
 
 ### Soporte y Comunidad
-- [OpenVPN Support](https://support.openvpn.com/)
-- [Docker Community Forums](https://forums.docker.com/)
-- [Stack Overflow - OpenVPN](https://stackoverflow.com/questions/tagged/openvpn)
+- **[OpenVPN Community Forums](https://forums.openvpn.net/)** - Foros de la comunidad
+- **[Docker Community](https://www.docker.com/community/)** - Soporte de Docker
 
 ---
 
-## 📄 Licencia
+## ⚠️ Notas Importantes
 
-Este proyecto está disponible bajo la licencia MIT. Consulta el archivo `LICENSE` para más detalles.
-
-## 🤝 Contribuciones
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## ⚠️ Disclaimer
-
-Este proyecto es para fines educativos y de práctica. Para uso en producción, asegúrate de seguir todas las mejores prácticas de seguridad y cumplir con las regulaciones locales.
+- **Licencia**: OpenVPN AS permite 2 conexiones simultáneas gratuitas
+- **Producción**: Para más conexiones, se requiere licencia comercial de OpenVPN
+- **Privilegios Docker**: Requiere `NET_ADMIN`, `MKNOD` y acceso a `/dev/net/tun` (ya configurado en docker-compose.yml)
+- **Seguridad**: Cambiar contraseñas por defecto inmediatamente
+- **Acceso remoto**: Configurar firewall y router apropiadamente
+- **IP Pública**: Para acceso remoto, se recomienda tener una IP pública o nombre de dominio

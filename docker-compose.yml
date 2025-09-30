@@ -1,78 +1,22 @@
-version: '3.8'
-
 services:
   openvpn-as:
-    image: openvpn/openvpn-as:${OPENVPN_VERSION:-latest}
+    image: openvpn/openvpn-as:latest
     container_name: openvpn-access-server
     restart: unless-stopped
     
-    # Network configuration
     ports:
-      - "${ADMIN_UI_PORT:-943}:943/tcp"     # Admin Web UI (HTTPS)
-      - "${CLIENT_UI_PORT:-943}:943/udp"    # Client Web UI
-      - "${OPENVPN_PORT:-1194}:1194/udp"    # OpenVPN UDP port
-      - "${OPENVPN_TCP_PORT:-1194}:1194/tcp" # OpenVPN TCP port (optional)
+      - "943:943"       # Admin & Client Web UI (HTTPS)
+      - "1194:1194/udp" # OpenVPN UDP port
     
-    # Required capabilities and devices for VPN functionality
     cap_add:
-      - NET_ADMIN  # Network administration capabilities
-      - MKNOD      # Allow creating device nodes
+      - NET_ADMIN
+      - MKNOD
     
     devices:
-      - /dev/net/tun:/dev/net/tun  # TUN device access for VPN traffic
+      - /dev/net/tun:/dev/net/tun
     
-    # Environment variables
-    environment:
-      - OPENVPN_AS_USERNAME=${ADMIN_USERNAME:-openvpn}
-      - OPENVPN_AS_PASSWORD=${ADMIN_PASSWORD:-changeme}
-      - OPENVPN_AS_HOSTNAME=${SERVER_HOSTNAME:-localhost}
-      - OPENVPN_AS_PROTO=${VPN_PROTOCOL:-udp}
-      - OPENVPN_AS_PORT=${OPENVPN_PORT:-1194}
-      - OPENVPN_AS_NETWORK=${VPN_NETWORK:-192.168.255.0}
-      - OPENVPN_AS_NETMASK=${VPN_NETMASK:-255.255.255.0}
-    
-    # Volume mounts for persistent data
     volumes:
-      - ./config:/opt/openvpn-as/etc
-      - ./data:/opt/openvpn-as/tmp
-      - ./logs:/var/log/openvpnas
       - openvpn-data:/opt/openvpn-as
-    
-    # Health check
-    healthcheck:
-      test: ["CMD", "curl", "-f", "https://localhost:943/", "-k"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    
-    # Security settings
-    security_opt:
-      - no-new-privileges:true
-    
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          memory: ${MEMORY_LIMIT:-512M}
-          cpus: '${CPU_LIMIT:-1.0}'
-        reservations:
-          memory: ${MEMORY_RESERVATION:-256M}
-          cpus: '${CPU_RESERVATION:-0.5}'
 
-# Named volumes
 volumes:
   openvpn-data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data/openvpn-as
-
-# Networks (optional - for advanced configurations)
-networks:
-  default:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: ${DOCKER_SUBNET:-172.20.0.0/16}
