@@ -1,0 +1,76 @@
+# OpenVPN Docker Project .gitignore
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Data directories (contains sensitive information)
+data/
+logs/
+config/
+
+# Backup files
+backups/
+*.backup
+*.bak
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker files
+.docker/
+
+# Certificates and keys
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
+
+# Log files
+*.log
+
+# Compressed files
+*.tar.gz
+*.zip
+*.rar
+
+# Python cache (if using Python scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node modules (if using Node.js tools)
+node_modules/
+
+# IDE specific files
+.vscode/settings.json
+.idea/
+
+# Local configuration overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Test files
+test-*.txt
+debug-*.log
